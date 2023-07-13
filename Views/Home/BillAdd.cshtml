@@ -1,0 +1,520 @@
+﻿@model BillingDemo.ViewModels.InventoryViewModel
+
+@{
+    ViewData["Title"] = "Create";
+}
+
+<style>
+
+    /* Blue */
+    .info {
+        border-color: #2196F3;
+        color: dodgerblue;
+    }
+
+        .info:hover {
+            background: #2196F3;
+            color: white;
+        }
+
+    .glyphicon-trash:hover {
+        color: red;
+    }
+</style>
+
+<style>
+
+    thead{
+        background-color: #819527;
+        color: #fff;
+    }
+
+    tbody {
+        background-color: #e4f0f5;
+    }
+
+    caption {
+        padding: 10px;
+        caption-side: bottom;
+    }
+
+    table {
+        border-collapse: collapse;
+        border: 2px solid rgb(200, 200, 200);
+        letter-spacing: 1px;
+        font-family: sans-serif;
+        font-size: 100%;
+    }
+
+    td,
+    th {
+        border: 1px solid rgb(190, 190, 190);
+        padding: 5px 10px;
+    }
+
+    .custom-dropdown-style {
+        /* Add your custom styles here */
+        background-color: #f2f2f2;
+    }
+
+</style>
+
+<div class="container-fluid">
+    <div class="row">
+        <div class="col-md-4">
+            @Html.EditorFor(x=>x.BillNo, new { htmlAttributes = new { @class = "form-control input-sm idBillNo", @id = "idBillNo",@placeholder = "Bill No" } })
+        </div>
+        <div class="col-md-2">
+            <button style="margin-right:5px; color:white" id="BillSearch" class="btn btn-info">
+                <span><strong>Find</strong></span>
+            </button>
+        </div>
+    </div>
+</div>
+<br />
+<div class="container-fluid">
+    <div class="row">
+        <div class="col-md-4">
+            @Html.DropDownList("Products", null, "Add Product or Item",htmlAttributes: new { @class = "form-control custom-dropdown-style", @id = "ProductID" })
+        </div>
+        <div class="col-md-4">
+            @Html.DropDownList("Customers", null, "Select a Customer",htmlAttributes: new { @class = "form-control custom-dropdown-style", @id = "CustomerID" })
+        </div>
+        <div class="col-md-2">
+            @Html.EditorFor(x=>x.Date, new { htmlAttributes = new { @class = "form-control input-sm idDate", @id = "idDate" } })
+        </div>
+    </div>
+</div>
+
+<div class="container-fluid">
+    <h3 style="margin-top:10px">Bill Details</h3>
+    <input type="number" id="idInventory" hidden />
+    <table id="detailsTable" class="table">
+        <thead>
+            <tr>
+                <th style="width:30%">@Html.DisplayNameFor(model => model.ProductName)</th>
+                <th style="width:14%">Rate</th>
+                <th style="width:14%">Qty</th>
+                <th style="width:14%">TotalAmount</th>
+                <th style="width:14%">Discount</th>
+                <th style="width:14%">NetAmount</th>
+            </tr>
+        </thead>
+        <tbody id="detailsTableBody"></tbody>
+    </table>
+</div>
+<div class="container-fluid" style="text-align: right;">
+    <p> Net Total : <input type="number" id="grandNetTotal" readonly /></p>
+    <p> Discount Total : <input type="number" id="grandDiscountTotal" readonly /></p>
+    <p> Paid Amount :<input type="number" id="paidAmount" /></p>
+    <p> Due : <input type="number" id="dueAmount" readonly /></p>
+</div>
+
+<div class="container-fluid" style="text-align: right;">
+    <button style="margin-right:5px; color:white" id="btnBillAdd" class="btn btn-info pull-right">
+        <span><strong>Save Changes</strong></span>
+    </button>
+</div>
+
+@section Scripts{
+
+    <script type="text/javascript">
+
+        var IsUpdate = false;
+        $(document).ready(function () {
+            //Calling Grand Total Function
+            CalculateTotalAmount();
+            //Calling Due Amount Function
+            CalculateDueAmount();
+        });
+
+        // Search Bill
+        $('#BillSearch').click(function () {
+            IsUpdate = true;
+            var $billNo = $("#idBillNo").val();
+            //alert($productval);
+            var tableBody = $("#detailsTableBody");
+            tableBody.empty();
+            if ($billNo != '') {
+                $.ajax({
+                    url: '/Home/GetBills',
+                    type: "GET",
+                    dataType: 'json',
+                    data: { BillNo: $billNo },
+                    success: function (data) {
+                        //alert(data.InventoryId);
+                        var _date = new Date(data.Date);
+                        //alert(_date.toInputFormat());
+                        $("#paidAmount").val(data.PaidAmount);
+                        $('#dueAmount').val(data.DueAmount);
+                        $("#idDate").val(_date.toInputFormat());
+                        $('#CustomerID').val(data.CustomerId);
+                        $('#idInventory').val(data.InventoryId);
+                        $.each(data._InventoryProductsList, function (i, v) {
+                            //alert(v.ProductName);
+                            var _rate = parseFloat(v.Rate) || 0 ;
+                            var _Qty = parseFloat(v.Qty) || 0;
+                            var _discount = parseFloat(v.Discount) || 0;
+                            var _totalAmount = roundNumber(_rate * _Qty, 12);
+                            var _netTotal = roundNumber(_totalAmount - _discount, 12);
+                            // Create the HTML markup for the new row
+                            var newRow = "<tr>"
+                                + '<td><p class="ProductName">' + v.ProductName + '</p><p class="ProductId" style="display:none">' + v.ProductId + '</p><p class="DetailId" style="display:none">' + v.DetailId + '</p></td>'
+                                + '<td><p class="Rate">' + v.Rate + '</p></td>'
+                                + '<td><input type="number" style="width:90px" value="' + v.Qty + '" class="Qty"></td>'
+                                + '<td><p class="TotalAmount">' + _totalAmount + '</p></td>'
+                                + '<td><input type="number" style="width:90px" value="' + v.Discount + '" class="Discount"></td>'
+                                + '<td><p class="NetAmount">' + _netTotal + '</p></td>'
+                                //+ '<td><p class="ProductId" style="display:none">' + v.ProductId + '</p></td>'
+
+                                + "</tr>";
+
+                            // Append the new row to the tbody element
+                            tableBody.append(newRow);
+                            //Calling Grand Total Function
+                            CalculateTotalAmount();
+                            //Calling Due Amount Function
+                            CalculateDueAmount();
+                        });
+                    },
+                    error: function (xhr, ajaxOptions, thrownError) {
+                        alert(xhr.status);
+                        alert(thrownError);
+                    }
+                });
+            }
+            else {
+                alert("Please select a product.");
+            }
+        })
+
+        //Adding prod on dropdown change
+        $("#ProductID").change(function (event) {
+            var $productval = parseInt($("#ProductID").val());
+            //alert($productval);
+            var tableBody = $("#detailsTableBody");
+
+            if (!isNaN($productval)) {
+                $.ajax({
+                    url:'/Home/GetProduct',
+                    type: "GET",
+                    dataType: 'json',
+                    data: { productId: $productval },
+                    success: function (data) {
+                        //alert(data.Id);
+                        //This is for avoiding duplicate table row insert
+                        var IsReturn = false;
+                        var tbodyIsEmpty = $('tbody').is(':empty');
+                        //alert(tbodyIsEmpty);
+                        var ProdList = [];
+                        $('#detailsTable tbody tr').each(function () {
+                            var row = $(this).closest("tr");
+                            var Prod = row.find('.ProductName').text();
+                            //alert(Prod);
+                            ProdList.push(Prod);
+                            $.each(ProdList, function (index, element) {
+                                //alert("Element :"+element);
+                                if (element == data.Name) {
+                                    //alert("Matched");
+                                    IsReturn = true;
+                                }
+                            });
+                        });
+
+                        // Create the HTML markup for the new row
+                        var newRow = "<tr>"
+                            + '<td><p class="ProductName">' + data.Name + '</p> <p class="ProductId" style="display:none">' + data.Id + '</p></td>'
+                            + '<td><p class="Rate">' + data.Rate + '</p></td>'
+                            + '<td><input type="number" style="width:90px" class="Qty"></td>'
+                            + '<td><p class="TotalAmount"></p></td>'
+                            + '<td><input type="number" style="width:90px" class="Discount"></td>'
+                            + '<td><p class="NetAmount"></p></td>'
+                            //+ '<td><p class="ProductId" style="display:none">' + data.Id + '</p></td>'
+                            +"</tr>";
+
+                        // Append the new row to the tbody element
+                        if (tbodyIsEmpty){
+                            tableBody.append(newRow);
+                        }
+                        else{
+                            if(!IsReturn){
+                                tableBody.append(newRow);
+                            }
+                            else{
+                                alert("already exists");
+                            }
+                        }
+
+                        //Calling Grand Total Function
+                        CalculateTotalAmount();
+                        //Calling Due Amount Function
+                        CalculateDueAmount();
+
+                    },
+                    error: function (xhr, ajaxOptions, thrownError) {
+                        alert(xhr.status);
+                        alert(thrownError);
+                    }
+                });
+            }
+            else {
+                alert("Please select a product.");
+            }
+        })
+
+        // Calculation of Rate and Quantity
+        $('#detailsTable').on('input', '.Rate, .Qty', function () {
+            var row = $(this).closest('tr');
+            // getting row wise Quantity
+            var $Quantity = parseFloat(row.find('.Qty').val()) || 0;
+            // getting row wise Rate
+            var $Rate = parseFloat(row.find('.Rate').text()) || 0;
+            // calculating row wise TotalAmount
+            var $TotalAmount = roundNumber($Rate * $Quantity, 12);
+            // inserting row wise TotalAmount
+            row.find('.TotalAmount').html($TotalAmount);
+            //Calling Grand Total Function
+            CalculateTotalAmount();
+            //Calling Due Amount Function
+            CalculateDueAmount();
+        });
+
+        // Calculation of Discount and TotalAmount
+        $('#detailsTable').on('input', '.TotalAmount, .Discount', function () {
+            var row = $(this).closest('tr');
+            // getting row wise TotalAmount
+            var $totalAmount = parseFloat(row.find('.TotalAmount').text()) || 0;
+            // getting row wise Discount
+            var $Discount = parseFloat(row.find('.Discount').val()) || 0;
+            // calculating row wise TotalAmount
+            var $NetAmount = roundNumber($totalAmount - $Discount, 12);
+            // inserting row wise TotalAmount
+            row.find('.NetAmount').html($NetAmount);
+            //Calling Grand Total Function
+            CalculateTotalAmount();
+            //Calling Due Amount Function
+            CalculateDueAmount();
+        });
+
+        //Calculate sum of grand total amount
+        function CalculateTotalAmount() {
+            var netTotal = 0, DiscountTotal = 0;
+            $('#detailsTable tbody tr').each(function () {
+                var row = $(this).closest("tr");
+                //Net Total Grand Total Calculation
+                var netAmount = parseFloat(row.find('.NetAmount').text()) || 0;
+                if (netAmount > 0) {
+                    var netAmountvalue = parseFloat(row.find('.NetAmount').text()) || 0;
+                    //alert(value);
+                    if (!isNaN(netAmountvalue)) {
+                        netTotal += netAmountvalue;
+                    }
+                }
+                //Discount Grand Total Calculation
+                var DiscountAmount = parseFloat(row.find('.Discount').val()) || 0;
+                if (DiscountAmount > 0) {
+                    var DiscountAmountvalue = parseFloat(row.find('.Discount').val()) || 0;
+                    //alert(value);
+                    if (!isNaN(DiscountAmountvalue)) {
+                        DiscountTotal += DiscountAmountvalue;
+                    }
+                }
+            });
+            $("#grandNetTotal").val(netTotal);
+            $("#grandDiscountTotal").val(DiscountTotal);
+            //Calling Due Amount Function
+            CalculateDueAmount();
+        }
+
+        //Calling Due Amount Function
+        $('#paidAmount').on('input', function () {
+            //$('#dueAmount').val(0);
+            //Inserting paid amount
+            CalculateDueAmount();
+        });
+
+        //Calculate due Amount
+        function CalculateDueAmount(){
+            var $paidAmount = parseFloat($("#paidAmount").val()) || 0;
+            var $grandNetTotal = parseFloat($("#grandNetTotal").val()) || 0;
+            var $dueAmount = roundNumber($grandNetTotal - $paidAmount,12);
+            //Inserting due amount
+            $('#dueAmount').val($dueAmount);
+        }
+
+        //SaveChange Button Click event
+        $('#btnBillAdd').click(function(){
+            if (Validate()) {
+                if (IsUpdate) {
+                    UpdatBillsFromDatabase();
+                }
+                else {
+                    AddBillsIntoDatabase();
+                }
+            }
+        })
+
+        // Adding bill to DB
+        function AddBillsIntoDatabase() {
+            var objInventoryViewModel = {};
+            var _InventoryProductsList = [];
+            //getting inventoryViewModel values
+            var _billNo = $("#idBillNo").val();
+            var _date = $("#idDate").val();
+            var _customer = $('#CustomerID').val();
+            var _discount = $('#grandDiscountTotal').val();
+            var _totalBill = $('#grandNetTotal').val();
+            var _paid = $('#paidAmount').val();
+            var _due = $('#dueAmount').val();
+            //alert(_billNo);
+            $('#detailsTable tbody tr').each(function () {
+                var row = $(this).closest("tr");
+                var objDetails = {};
+                //populating inventoryProductViewModel
+                objDetails.DetailId = parseFloat(row.find('.DetailId').text()) || 0;
+                objDetails.ProductId = parseFloat(row.find('.ProductId').text()) || 0;
+                objDetails.Rate = parseFloat(row.find('.Rate').text()) || 0;
+                objDetails.Qty = parseFloat(row.find('.Qty').val()) || 0;
+                objDetails.Discount = parseFloat(row.find('.Discount').val()) || 0;
+                //alert(objDetails.Discount);
+                _InventoryProductsList.push(objDetails);
+
+            });
+            //populating inventoryViewModel
+            objInventoryViewModel.BillNo = _billNo;
+            objInventoryViewModel.Date = _date;
+            objInventoryViewModel.CustomerId = _customer;
+            objInventoryViewModel.TotalDiscount = _discount;
+            objInventoryViewModel.TotalBillAmount = _totalBill;
+            objInventoryViewModel.DueAmount = _due;
+            objInventoryViewModel.PaidAmount = _paid;
+            objInventoryViewModel._InventoryProductsList = _InventoryProductsList;
+            //passing inventoryViewModel through ajax
+            $.ajax({
+                async: true,
+                url: '/Home/BillAdd',
+                type: "POST",
+                dataType: 'json',
+                data: { objInventoryViewModel },
+                //contentType: "application/json; charset=utf-8",
+                success: function (data) {
+                    if (data.status === true) {
+                        alert(data.message);
+                        window.location.href = "/Home/Bills";
+                    }
+                    if (data.status === false) {
+                        alert(data.message);
+                        window.location.href = "/Home/Bills";
+                    }
+
+                },
+                error: function (xhr, ajaxOptions, thrownError) {
+                    alert(xhr.status);
+                    alert(thrownError);
+                }
+            });
+        }
+
+        // Updating bill from DB
+        function UpdatBillsFromDatabase() {
+            var objInventoryViewModel = {};
+            var _InventoryProductsList = [];
+            //getting inventoryViewModel values
+            var _billNo = $("#idBillNo").val();
+            var _date = $("#idDate").val();
+            var _customer = $('#CustomerID').val();
+            var _discount = $('#grandDiscountTotal').val();
+            var _totalBill = $('#grandNetTotal').val();
+            var _paid = $('#paidAmount').val();
+            var _due = $('#dueAmount').val();
+            var _InventoryId = $('#idInventory').val();
+            //alert(_billNo);
+            $('#detailsTable tbody tr').each(function () {
+                var row = $(this).closest("tr");
+                var objDetails = {};
+                //populating inventoryProductViewModel
+                objDetails.DetailId = parseFloat(row.find('.DetailId').text()) || 0;
+                objDetails.ProductId = parseFloat(row.find('.ProductId').text()) || 0;
+                objDetails.Rate = parseFloat(row.find('.Rate').text()) || 0;
+                objDetails.Qty = parseFloat(row.find('.Qty').val()) || 0;
+                objDetails.Discount = parseFloat(row.find('.Discount').val()) || 0;
+                //alert(objDetails.Discount);
+                _InventoryProductsList.push(objDetails);
+
+            });
+            //populating inventoryViewModel
+            objInventoryViewModel.InventoryId = _InventoryId;
+            objInventoryViewModel.BillNo = _billNo;
+            objInventoryViewModel.Date = _date;
+            objInventoryViewModel.CustomerId = _customer;
+            objInventoryViewModel.TotalDiscount = _discount;
+            objInventoryViewModel.TotalBillAmount = _totalBill;
+            objInventoryViewModel.DueAmount = _due;
+            objInventoryViewModel.PaidAmount = _paid;
+            objInventoryViewModel._InventoryProductsList = _InventoryProductsList;
+            //passing inventoryViewModel through ajax
+            $.ajax({
+                async: true,
+                url: '/Home/BillUpdate',
+                type: "POST",
+                dataType: 'json',
+                data: { objInventoryViewModel },
+                //contentType: "application/json; charset=utf-8",
+                success: function (data) {
+                    if (data.status === true) {
+                        alert(data.message);
+                        window.location.href = "/Home/Bills";
+                    }
+                    if (data.status === false) {
+                        alert(data.message);
+                        window.location.href = "/Home/Bills";
+                    }
+
+                },
+                error: function (xhr, ajaxOptions, thrownError) {
+                    alert(xhr.status);
+                    alert(thrownError);
+                }
+            });
+        }
+
+        //Validating before submit
+        function Validate(){
+            var IsValidate = true;
+            var _billNo = $("#idBillNo").val();
+            var _customer = parseInt($('#CustomerID').val());
+            var _paid = parseFloat($('#paidAmount').val());
+
+            if (_billNo == ''){
+                IsValidate = false;
+                alert("Please Enter Bill No");
+                $("#idBillNo").focus();
+            }
+            if (isNaN(_customer)) {
+                IsValidate = false;
+                alert("Please Select Customer");
+                $('#CustomerID').focus();
+            }
+            if (isNaN(_paid)) {
+                IsValidate = false;
+                alert("Please Enter Paid Amount");
+                $('#paidAmount').focus();
+            }
+
+            return IsValidate;
+        }
+
+        //This is a custom function for getting decimal sum with fixed after point value
+        function roundNumber(number, decimals) {
+            var newnumber = new Number(number + '').toFixed(parseInt(decimals));
+            return parseFloat(newnumber);
+        }
+        //This is a custom function for getting input type Date
+        Date.prototype.toInputFormat = function () {
+            var yyyy = this.getFullYear().toString();
+            var mm = (this.getMonth() + 1).toString(); // getMonth() is zero-based
+            var dd = this.getDate().toString();
+            return yyyy + "-" + (mm[1] ? mm : "0" + mm[0]) + "-" + (dd[1] ? dd : "0" + dd[0]);
+        };
+    </script>
+}

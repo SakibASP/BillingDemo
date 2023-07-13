@@ -1,0 +1,46 @@
+﻿@model IEnumerable<BillingDemo.Models.Inventories>
+
+@{
+    ViewData["Title"] = "Index";
+}
+
+<h1>Index</h1>
+
+<p>
+    <a asp-action="BillAdd" class="btn btn-primary">Add/Update</a>
+</p>
+<table class="table">
+    <thead>
+        <tr>
+            <th>
+                @Html.DisplayNameFor(model => model.BillNo)
+            </th>
+            <th>
+                @Html.DisplayNameFor(model => model.CustomerId)
+            </th>
+            <th>
+                @Html.DisplayNameFor(model => model.Date)
+            </th>
+            <th></th>
+        </tr>
+    </thead>
+    <tbody>
+        @foreach (var item in Model)
+        {
+            <tr>
+                <td>
+                    @Html.DisplayFor(modelItem => item.BillNo)
+                </td>
+                <td>
+                    @Html.DisplayFor(modelItem => item._Customers.Name)
+                </td>
+                <td>
+                    @Html.DisplayFor(modelItem => item.Date)
+                </td>
+                <td>
+                    <a href="#" class="btn btn-danger">Delete</a>
+                </td>
+            </tr>
+        }
+    </tbody>
+</table>
