@@ -130,7 +130,7 @@ namespace BillingDemo.Controllers
 
             if (objInventory._InventoryProductsList!.Any())
             {
-                foreach (var item in objInventory._InventoryProductsList)
+                foreach (var item in objInventory._InventoryProductsList!)
                 {
                     var inventoryProducts = new InventoryProducts()
                     {
@@ -204,7 +204,7 @@ namespace BillingDemo.Controllers
 
             if (objInventory._InventoryProductsList!.Any())
             {
-                foreach (var item in objInventory._InventoryProductsList)
+                foreach (var item in objInventory._InventoryProductsList!)
                 {
                     InventoryProducts model = new InventoryProducts();
                     if (item.DetailId > 0)
