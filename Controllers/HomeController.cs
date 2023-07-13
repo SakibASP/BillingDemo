@@ -57,7 +57,7 @@ namespace BillingDemo.Controllers
             if (!string.IsNullOrEmpty(BillNo))
             {
                 var inv = db.Inventories.Include(x => x._Customers).Where(x => x.BillNo == BillNo).FirstOrDefault();
-                if(inv is not null)
+                if (inv is not null)
                 {
                     //Populating InventoryProductViewModel Class
                     var prodList = (from invProd in db.InventoryProducts.Include(x => x._Products)
@@ -86,7 +86,11 @@ namespace BillingDemo.Controllers
                     };
                     return Json(InventoryVm);
                 }
-                else { return Json(null); }
+                else
+                {
+                    _logger.LogInformation("Bill Not Found");
+                    return Json(null);
+                }
             }
             else { return Json(null); }
         }
@@ -107,6 +111,7 @@ namespace BillingDemo.Controllers
             }
             catch (Exception ex)
             {
+                _logger.LogError(ex,"Bill Add Exception");
                 return Json(new { status = false, message = "An unknown error has occured" });
             }
         }
@@ -162,6 +167,7 @@ namespace BillingDemo.Controllers
             }
             catch (Exception ex)
             {
+                _logger.LogError(ex, "Save Bill Exception");
                 transaction.Rollback();
                 return Json(new { status = false, message = "An unknown error has occured" });
             }
@@ -184,6 +190,7 @@ namespace BillingDemo.Controllers
             }
             catch (Exception ex)
             {
+                _logger.LogError(ex, "Bill Update Exception");
                 return Json(new { status = false, message = "An unknown error has occured" });
             }
         }
@@ -247,6 +254,7 @@ namespace BillingDemo.Controllers
             }
             catch (Exception ex)
             {
+                _logger.LogError(ex, "Update Bills Exception");
                 transaction.Rollback();
                 return Json(new { status = false, message = "An unknown error has occured" });
             }
