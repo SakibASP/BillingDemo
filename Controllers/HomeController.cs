@@ -128,7 +128,7 @@ namespace BillingDemo.Controllers
             dc.Inventories.Add(inventories);
             dc.SaveChanges();
 
-            if (objInventory._InventoryProductsList.Any())
+            if (objInventory._InventoryProductsList!.Any())
             {
                 foreach (var item in objInventory._InventoryProductsList)
                 {
@@ -202,7 +202,7 @@ namespace BillingDemo.Controllers
             dc.Update(inventories);
             dc.SaveChanges();
 
-            if (objInventory._InventoryProductsList.Any())
+            if (objInventory._InventoryProductsList!.Any())
             {
                 foreach (var item in objInventory._InventoryProductsList)
                 {
